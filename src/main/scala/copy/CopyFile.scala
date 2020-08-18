@@ -1,15 +1,14 @@
 package copy
 
 import cats.implicits._
-import cats.effect.{IO, ContextShift, IOApp}
+import cats.effect.{ContextShift, ExitCode, IO, IOApp}
 import cats.effect.concurrent.Semaphore
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.File
-
 import copy.CopyMethods._
 
-object CopyFile extends App {
-  implicit val cs: ContextShift[IO] = IO.contextShift(global)
+object CopyFile extends IOApp {
+//  implicit val cs: ContextShift[IO] = IO.contextShift(global)
 
   def copy(in: File, out: File): IO[Long] =
     for {
@@ -20,10 +19,13 @@ object CopyFile extends App {
         } }
     } yield copy
 
-  val inFile = new File("hello.txt")
-  val outFile = new File("out.txt")
-
-  val program: IO[Long] = copy(inFile, outFile)
-
-  val res = program.attempt.unsafeRunSync().swap.getOrElse(IO(println("Success")).unsafeRunSync())
+  override def run(args: List[String]): IO[ExitCode] =
+    for {
+      _ <- if(args.length < 2) IO.raiseError(new IllegalArgumentException("need input and output filenames"))
+          else IO.unit
+      iFile = new File(args(0))
+      oFile = new File(args(1))
+      _ <- copy(iFile, oFile)
+      _ <- IO(println("File copied successfully!"))
+    } yield ExitCode.Success
 }
